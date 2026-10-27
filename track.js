@@ -54,6 +54,8 @@ async function getServer() {
   }
   data.online = [...online];
   data.unmatched = unmatched; // joueurs [AKT] non reconnus : à ajouter dans members.json
+  data.sample = players.slice(0, 10).map(p => p.name);
+  data.debug = players.filter(p => /josh|kore|mirage|akt/i.test(p.name)).map(p => p.name);
   data.lastRun = now; data.updated = now;
   fs.writeFileSync("data.json", JSON.stringify(data));
   console.log(`${online.size} membres en ligne, ${unmatched.length} [AKT] non reconnus`);
