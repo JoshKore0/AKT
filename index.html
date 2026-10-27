@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AKT – Temps d’activité</title>
+<style>
+:root{--bg:#f4f1f1;--card:#fff;--tx:#1a1214;--mut:#6d6065;--red:#c8102e;--bd:#e2d9db;--bar:#c8102e22}
+@media (prefers-color-scheme:dark){:root{--bg:#0e0a0b;--card:#181214;--tx:#f2eaec;--mut:#a09094;--red:#e5173a;--bd:#2d2225;--bar:#e5173a30}}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.4}
+.w{max-width:860px;margin:0 auto;padding:20px 16px 40px}
+h1{margin:0;font-size:1.6rem}h1 span{color:var(--red)}
+.sub{color:var(--mut);font-size:.9rem;margin:2px 0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--red);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font-size:1.3rem}.stat small{color:var(--mut)}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;cursor:pointer}
+button.on{background:var(--red);border-color:var(--red);color:#fff}
+.row{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:10px 0;border-top:1px solid var(--bd)}
+.row:first-child{border-top:0}
+.name{font-weight:600}.name i{font-style:normal;color:var(--mut);font-weight:400;font-size:.85rem;margin-left:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--bd);margin-right:7px}
+.dot.live{background:#2ecc71;box-shadow:0 0 8px #2ecc71}
+.time{font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
+.bar{grid-column:1/-1;height:6px;background:var(--bar);border-radius:4px;overflow:hidden}.bar div{height:100%;background:var(--red)}
+.warn{background:#c8102e22;border:1px solid var(--red);border-radius:10px;padding:10px 12px;margin-bottom:14px;display:none}
+.mut{color:var(--mut);font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>暁 <span>AKT</span> · AKaTsuki</h1>
+  <p class="sub" id="upd">Chargement…</p>
+  <div class="warn" id="warn"></div>
+  <div class="stats">
+    <div class="stat"><small>En ligne maintenant</small><b id="s-live">0</b></div>
+    <div class="stat"><small>Temps total squad</small><b id="s-tot">0h</b></div>
+    <div class="stat"><small>Moyenne / membre</small><b id="s-avg">0h</b></div>
+    <div class="stat"><small>Plus actif</small><b id="s-top">—</b></div>
+  </div>
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button data-p="day">Aujourd’hui</button><button data-p="week" class="on">Semaine</button>
+      <button data-p="month">Mois</button><button data-p="all">Total</button>
+    </div>
+    <div id="list"></div>
+  </div>
+  <p class="mut">Mesure toutes les 5 minutes environ, sur SL PVP. Fuseau : Paris.</p>
+</div>
+<script>
+var cfg,data,period="week";
+var fmtD=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Paris"});
+function start(){var t=fmtD.format(new Date());
+  if(period==="day")return t;if(period==="all")return"";
+  if(period==="month")return t.slice(0,8)+"01";
+  var d=new Date(t+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10)}
+function fmt(s){var m=Math.round(s/60);return Math.floor(m/60)+"h "+String(m%60).padStart(2,"0")+"m"}
+function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML}
+function render(){
+  var s0=start(),on=data.online||[],rows=cfg.members.map(function(m){
+    var days=(data.members[m.id]||{}).days||{},t=0;
+    for(var k in days)if(k>=s0)t+=days[k];return{m:m,t:t,on:on.indexOf(m.id)>-1}});
+  rows.sort(function(a,b){return b.t-a.t});
+  var max=rows[0].t||1,tot=rows.reduce(function(a,r){return a+r.t},0);
+  document.getElementById("list").innerHTML=rows.map(function(r,i){
+    return'<div class="row"><div class="name"><span class="dot'+(r.on?' live':'')+'"></span>'+(i+1)+'. '+esc(r.m.name)+(r.m.role?'<i>'+esc(r.m.role)+'</i>':'')+
+    '</div><div class="time">'+fmt(r.t)+'</div><div class="bar"><div style="width:'+(r.t/max*100)+'%"></div></div></div>'}).join("");
+  document.getElementById("s-live").textContent=on.length;
+  document.getElementById("s-tot").textContent=fmt(tot);
+  document.getElementById("s-avg").textContent=fmt(tot/rows.length);
+  document.getElementById("s-top").textContent=rows[0].t>0?rows[0].m.name:"—";}
+document.getElementById("tabs").onclick=function(e){var p=e.target.dataset.p;if(!p)return;period=p;
+  [].forEach.call(this.children,function(b){b.classList.toggle("on",b.dataset.p===p)});render()};
+Promise.all([fetch("members.json").then(function(r){return r.json()}),fetch("data.json?"+Date.now()).then(function(r){return r.json()})])
+.then(function(a){cfg=a[0];data=a[1];
+  document.getElementById("upd").textContent=data.updated?"Dernière mise à jour : "+new Date(data.updated).toLocaleString("fr-FR",{timeZone:"Europe/Paris"}):"En attente de la première mesure…";
+  var w=document.getElementById("warn"),msg=[];
+  if(data.error)msg.push("Le serveur FiveM n’a pas répondu à la dernière mesure.");
+  if(data.listVisible===false)msg.push("Le serveur masque la liste des joueurs : le suivi automatique est impossible.");
+  if(data.unmatched&&data.unmatched.length)msg.push("Pseudos [AKT] non reconnus : "+data.unmatched.join(", "));
+  if(msg.length){w.style.display="block";w.textContent=msg.join(" ")}
+  render();setInterval(function(){location.reload()},300000)})
+.catch(function(){document.getElementById("upd").textContent="Impossible de charger les données."});
+</script>
+</body>
+</html>
